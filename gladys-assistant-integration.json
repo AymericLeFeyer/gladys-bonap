@@ -6,8 +6,8 @@
     "en": "Meal planning with Bonap and Mealie: install them in Gladys and see your next meal.",
     "fr": "Planning repas avec Bonap et Mealie : installez-les dans Gladys et voyez votre prochain repas."
   },
-  "version": "0.1.0",
-  "docker_image": "ghcr.io/aymericlefeyer/gladys-bonap:0.1.0",
+  "version": "0.2.0",
+  "docker_image": "ghcr.io/aymericlefeyer/gladys-bonap:0.2.0",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/AymericLeFeyer/gladys-bonap/main/cover.png",
   "categories": ["services"],
@@ -605,7 +605,7 @@
     },
     {
       "name": "bonap",
-      "docker_image": "ghcr.io/aymericlefeyer/gladys-bonap-web:0.1.0",
+      "docker_image": "ghcr.io/aymericlefeyer/gladys-bonap-web:0.2.0",
       "start": "manual",
       "volumes": ["/data"],
       "read_only": false,

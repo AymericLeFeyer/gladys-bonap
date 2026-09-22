@@ -8,7 +8,7 @@ export interface ContainerGateway {
   stopContainer(name: string): Promise<unknown>;
 }
 
-export type ContainerName = 'mealie' | 'bonap';
+export type ContainerName = 'bonap';
 
 function envHash(env: Record<string, string>): string {
   const sorted = Object.fromEntries(Object.entries(env).sort(([a], [b]) => a.localeCompare(b)));
@@ -19,7 +19,7 @@ function envHash(env: Record<string, string>): string {
  * Starts a sub-container unless it already runs with the same env.
  * `startContainer` always restarts the container (and recreates it when the
  * env changed), so calling it blindly on every reconnection would bounce
- * Mealie and Bonap for nothing.
+ * Bonap for nothing.
  * @returns true when the container was (re)started.
  */
 export async function ensureRunning(

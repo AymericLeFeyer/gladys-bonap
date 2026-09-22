@@ -1,100 +1,70 @@
 # CLAUDE.md — gladys-bonap
 
-Dernière mise à jour : 2026-09-22. État : **v0.2** — installation Mealie par Gladys et mode « Mealie existant » validés sur un vrai Gladys le 2026-09-22 ; widgets `meal_plan` et actions de scène pas encore testés en réel.
+Dernière mise à jour : 2026-09-22. État : **v0.3** — Bonap seul (Mealie déplacé dans [gladys-mealie](https://github.com/AymericLeFeyer/gladys-mealie)). L'image `gladys-bonap-web` sans root a été validée sur un vrai Gladys en 0.2.0 ; la liste de courses n'a pas encore été testée en réel.
 
 ## 1. Projet
 
-Intégration externe Gladys Assistant (≥ 5.1.0, type `provider`) nommée **Bonap**. Conteneur principal Node qui pilote deux sous-conteneurs déclarés dans le manifeste : `mealie` (image officielle) et `bonap` (image `gladys-bonap-web`, Bonap adapté au sandbox). Fournit les widgets dashboard `next_meal` et `meal_plan`, et les actions de scène `get_next_meal` et `get_day_meals`.
+Intégration externe Gladys Assistant (≥ 5.1.0, type `provider`) nommée **Bonap**. Conteneur principal Node qui vérifie la connexion à un Mealie (URL + token saisis) et pilote le sous-conteneur `bonap` (image `gladys-bonap-web`), ou se branche sur un Bonap existant. Fournit le widget `shopping_list` et les actions de scène `add_to_shopping_list` / `get_shopping_list` sur la liste Mealie « Bonap » (celle que Bonap crée et utilise).
 
-Références : doc dev https://gladysassistant.com/docs/dev/external-integrations/ · SDK `@gladysassistant/integration-sdk` (README = doc la plus complète, types dans `index.d.ts`) · specs du core dans `GladysAssistant/Gladys:docs/specs/external-integrations/` (contrats manifeste, descripteur de conteneur, superviseur).
+**Projet frère** : `gladys-mealie` (`C:\Users\lefey\Git\gladys-mealie`) installe Mealie, ses widgets repas et scènes menus, et fait la promo de Bonap (section `bonap`, action `bonap_token` qui donne URL + token à coller ici). `MealieClient`, `StateStore`, `containers.ts` sont **dupliqués** entre les deux repos (le client est réduit à la liste de courses ici).
+
+Références : doc dev https://gladysassistant.com/docs/dev/external-integrations/ · SDK `@gladysassistant/integration-sdk` (README + `index.d.ts`) · specs du core dans `GladysAssistant/Gladys:docs/specs/external-integrations/` · Bonap : `C:\Users\lefey\Git\bonap` (liste « Bonap » : `ShoppingRepository.getOrCreateDefaultList`, ajout libre : `AddItemUseCase`).
 
 ## 2. Stack
 
-Node 24 exécute le **TypeScript directement** (type stripping) : pas de build. `tsc --noEmit` uniquement pour le typecheck → **syntaxe effaçable seulement** (`erasableSyntaxOnly` : pas d'enum, pas de parameter properties, pas de namespace), imports relatifs **avec l'extension `.ts`**. Tests `node --test "test/**/*.test.ts"`. ESLint 10 + typescript-eslint + Prettier (config du template officiel).
+Node 24 exécute le **TypeScript directement** (type stripping) : pas de build. `tsc --noEmit` pour le typecheck → **syntaxe effaçable seulement** (`erasableSyntaxOnly`), imports relatifs **avec l'extension `.ts`**. Tests `node --test "test/**/*.test.ts"`. ESLint + typescript-eslint + Prettier.
 
 ## 3. Structure (DDD léger)
 
 ```
-index.ts                                   # câblage SDK : handlers, file de réconciliation sérialisée
-src/domain/config/config.ts                # BonapConfig, normalizeConfig(raw), MANIFEST_DEFAULTS
-src/domain/meal/MealPlanEntry.ts           # MealPlanEntry { id, date YYYY-MM-DD, entryType, title, recipe: MealRecipe|null }
-src/domain/meal/nextMeal.ts                # findNextMeal(entries, now, types?), upcomingEntries, mealsOfDay, sortEntries, toLocalDay, addDays (pur)
-src/domain/meal/labels.ts                  # toLang(language), entryTypeLabel, mealName, dayLabel ("Aujourd'hui" / "Demain" / "Jeudi 24 septembre")
-src/application/stack/containers.ts        # ContainerGateway (sous-ensemble SDK), ensureRunning / ensureStopped
-src/application/stack/reconcileStack.ts    # reconcileStack(config, deps) → StackResult
-src/application/mealie/bootstrapMealie.ts  # prepareMealieDataDir, waitForMealie, bootstrapMealie
-src/application/widget/common.ts           # TTL_SECONDS (900), mealCard, buildMessageContent, httpsOnly, recipeImageKey/parseRecipeImageKey, openBonapButton
-src/application/widget/nextMealWidget.ts   # NEXT_MEAL_WIDGET, buildNextMealContent(next, now, language, {bonapUrl}), readMealTypes(settings)
-src/application/widget/mealPlanWidget.ts   # MEAL_PLAN_WIDGET, buildMealPlanContent(entries, now, days, language, {bonapUrl}), readPlanDays(settings)
-src/application/scene/sceneActions.ts      # GET_NEXT_MEAL_ACTION / GET_DAY_MEALS_ACTION, getNextMealOutputs / getDayMealsOutputs (entries, now, fields)
-src/infrastructure/mealie/MealieClient.ts  # client HTTP Mealie (fetch, timeout 10 s), MealieApiError(status)
-src/infrastructure/state/StateStore.ts     # /data/state.json (0600) : identifiants Mealie gérés + hash d'env des conteneurs
-docker/bonap/Dockerfile                    # image gladys-bonap-web (FROM ghcr.io/aymericlefeyer/bonap:<BONAP_VERSION>)
-docker-compose.sandbox.yml + scripts/      # reproduction du sandbox Gladys sans Gladys, bootstrap, manifeste dev
+index.ts                                     # câblage SDK : handlers, file de réconciliation sérialisée
+src/domain/config/config.ts                  # BonapConfig { mealieUrl, mealieToken, bonapMode, bonapUrl }, normalizeConfig, MANIFEST_DEFAULTS
+src/domain/shopping/ShoppingItem.ts          # ShoppingItem { id, text, checked, position, label }, BONAP_LIST_NAME, itemsToBuy
+src/application/stack/containers.ts          # ContainerGateway, ensureRunning / ensureStopped ('bonap')
+src/application/stack/reconcileStack.ts      # reconcileStack(config, { containers, store, createMealieClient? }) → { ok, mealie } | { ok: false, message }
+src/application/shopping/shoppingList.ts     # readListName, readShoppingList, addToShoppingList, shoppingListOutputs
+src/application/widget/common.ts             # toLang, truncate, httpsOnly, buildMessageContent, openBonapButton
+src/application/widget/shoppingListWidget.ts # SHOPPING_LIST_WIDGET, buildShoppingListContent(items|null, listName, language, { bonapUrl })
+src/infrastructure/mealie/MealieClient.ts    # getSelf, getShoppingLists, createShoppingList, getShoppingItems, addShoppingItem
+src/infrastructure/state/StateStore.ts       # /data/state.json : hash d'env du conteneur bonap
+docker/bonap/Dockerfile                      # image gladys-bonap-web (FROM ghcr.io/aymericlefeyer/bonap:<BONAP_VERSION>)
+docker-compose.sandbox.yml + scripts/        # sandbox Gladys sans Gladys (Mealie de test + Bonap), manifeste dev
 ```
 
-## 4. Configuration (`config_schema`)
+## 4. Manifeste
 
-| Clé                          | Type                                                    | Rôle                                                                            |
-| ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `mealie_mode`                | select radio `install` (défaut) \| `existing`           | Mealie installé par Gladys ou existant                                          |
-| `mealie_url`, `mealie_token` | string, secret                                          | lus seulement en `existing`                                                     |
-| `bonap_mode`                 | select radio `install` (défaut) \| `existing` \| `none` |                                                                                 |
-| `bonap_url`                  | string                                                  | `existing` seulement ; sert de lien du widget **si https**                      |
-| `intro`, `access`            | section                                                 | `access` utilise `{{gladys_host}}` + `{{port:mealie_ui}}` / `{{port:bonap_ui}}` |
+- `config_schema` : `intro` (promo Bonap + lien), `mealie_help` (section → intégration Mealie + bouton « Créer un token pour Bonap »), `mealie_url` (**required**), `mealie_token` (secret, **required**), `bonap_mode` radio `install` (défaut) | `existing`, `bonap_url`, `access` (`{{port:bonap_ui}}`).
+- `actions` : `test_connection`.
+- `widgets` : `shopping_list` (icône `shopping-cart`, setting `list_name` string défaut `Bonap`).
+- `scene_actions` : `add_to_shopping_list` (fields `item` string required — variables de scène acceptées —, `quantity` number, `list_name` → outputs `added`, `count`), `get_shopping_list` (field `list_name` → `count`, `summary` « • article » par ligne).
+- `containers` : `bonap` (`ghcr.io/aymericlefeyer/gladys-bonap-web:<version>`, manual, volume `/data`, 256 Mo, port 8080 nommé `bonap_ui`).
 
-Gladys **n'a pas de champs conditionnels** : tous les champs sont toujours affichés, les libellés disent quand les remplir.
-
-Actions : `test_connection` (getSelf), `mealie_credentials` (email + mot de passe du Mealie géré, lus dans state.json).
+**Clés publiées = définitives.** Nouveau champ `required` d'une action de scène → toujours avec `default`.
 
 ## 5. Use cases
 
-- `reconcileStack(config, { containers, store, dataRoot, mealieBootTimeoutMs, createMealieClient?, onProgress? })` → `{ ok: true, mealie }` | `{ ok: false, message: {en, fr}, mealie: null }`. Ordre : Mealie (install → `prepareMealieDataDir` + `ensureRunning('mealie', {})` + `waitForMealie` + `bootstrapMealie` ; existing → `ensureStopped('mealie')`) → `getSelf()` → Bonap (`ensureRunning('bonap', { VITE_MEALIE_URL, VITE_MEALIE_TOKEN })` ou `ensureStopped`). Appelé sur `connected` et `onConfigUpdated`, **jamais awaité dans un handler** (ack 5 s), sérialisé par une promesse chaînée dans index.ts.
-- `bootstrapMealie(client, store, generatePassword?)` : idempotent (retourne state.mealie s'il existe). Login `changeme@example.com` / `MyPassword` → `POST /api/users/api-tokens` → **persiste le token avant** de changer le mot de passe → `PUT /api/users/password`. 401 au login → `MealieAlreadyInitializedError`.
-- `findNextMeal(entries, now)` : créneaux `breakfast` <10 h, `lunch` <14 h, `snack` <17 h, `dinner`/`side`/`dessert` <21 h, `drink`/inconnu → fin de journée ; regroupe toutes les entrées du même (jour, créneau).
+- `reconcileStack` : URL/token manquants → message qui renvoie vers l'intégration Mealie ; hôte `localhost` / `127.0.0.1` / `mealie` → refus expliqué (réseaux Gladys séparés) ; `getSelf()` (401 → token refusé) ; puis `ensureRunning('bonap', { VITE_MEALIE_URL, VITE_MEALIE_TOKEN })` ou `ensureStopped('bonap')`.
+- `readShoppingList(mealie, listName)` → articles non cochés triés par `position`, **null si la liste n'existe pas** (le widget affiche alors l'état vide).
+- `addToShoppingList(mealie, fields)` : crée la liste si absente (comme Bonap), ajoute un article libre (`isFood: false`, `quantity` seulement si > 0), renvoie `{ added: true, count }`. Article vide → throw (échec de cette action seulement).
 
-- `getNextMealOutputs(entries, now, { meal_type: 'any'|<entryType>, language: 'fr'|'en' })` → `{ found, name, meal_type, day, date, summary }` (plusieurs plats du même créneau joints par « + »).
-- `getDayMealsOutputs(entries, now, { day: 'today'|'tomorrow', language })` → `{ count, names, summary }` (une ligne « Créneau : plats » par créneau, créneaux passés inclus).
-- Widgets et actions de scène lisent tous le planning **aujourd'hui → aujourd'hui + 7** (`fetchMealPlan` dans index.ts).
+## 6. Endpoints Mealie utilisés
 
-## 6. Widgets et actions de scène (manifeste)
+| Méthode | Endpoint                                                                                                            | Usage                                                                                                 |
+| ------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| GET     | `/api/users/self`                                                                                                   | test du token                                                                                         |
+| GET     | `/api/households/shopping/lists?page=1&perPage=-1`                                                                  | listes → `{ items: [{ id, name }] }`                                                                  |
+| POST    | `/api/households/shopping/lists` `{ name }`                                                                         | création de la liste                                                                                  |
+| GET     | `/api/households/shopping/lists/{id}`                                                                               | `listItems[]` (`display`, `note`, `checked`, `position`, `label.name`) — filtrer sur `shoppingListId` |
+| POST    | `/api/households/shopping/items/create-bulk` `[{ shoppingListId, note, isFood: false, checked: false, quantity? }]` | ajout                                                                                                 |
 
-| Clé             | Type                      | Réglages / champs                                           | Sortie                                                                     |
-| --------------- | ------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `next_meal`     | widget (icône `coffee`)   | `meal_types` multi_select (vide = tous)                     | texte caption « Jour · Créneau » + card-list (≤ 8) + bouton Bonap si https |
-| `meal_plan`     | widget (icône `calendar`) | `days` select `"1"`…`"7"`, défaut `"3"`                     | card-list list ≤ 8 lignes (sous-titre = jour) + caption si tronqué         |
-| `get_next_meal` | scene action (20 s)       | `meal_type` select (défaut `any`), `language` (défaut `fr`) | found, name, meal_type, day, date, summary                                 |
-| `get_day_meals` | scene action (20 s)       | `day` today/tomorrow, `language`                            | count, names, summary                                                      |
+## 7. Points d'attention
 
-**Les clés publiées sont définitives** (renommer = casser les scènes/dashboards existants). Ajouter un champ `required` sans `default` à une action = breaking. Valeurs de settings de widget = chaînes (d'où `"3"`). Pas de scene trigger : un déclencheur horaire Gladys + une action suffit.
-
-## 6 bis. Endpoints Mealie utilisés
-
-| Méthode | Endpoint                                                            | Usage                                   |
-| ------- | ------------------------------------------------------------------- | --------------------------------------- |
-| GET     | `/api/app/about`                                                    | sonde de démarrage (sans auth)          |
-| POST    | `/api/auth/token` (form `username`, `password`)                     | login admin par défaut → `access_token` |
-| POST    | `/api/users/api-tokens` `{ name }`                                  | → `{ token }`                           |
-| PUT     | `/api/users/password` `{ currentPassword, newPassword ≥ 8 }`        |                                         |
-| GET     | `/api/users/self`                                                   | test du token                           |
-| GET     | `/api/households/mealplans?start_date=&end_date=&page=1&perPage=-1` | planning → `{ items }`                  |
-| GET     | `/api/media/recipes/{id}/images/min-original.webp`                  | vignette du widget                      |
-
-## 7. SDK Gladys utilisé
-
-`getConfig`, `onConfigUpdated`, `setConnectionStatus(bool, {en, fr})`, `getContainers` (`{ name, status, desired, ports }`), `startContainer(name, { env })`, `stopContainer`, `onAction`, `onWidgetGet(key)` (`{ settings, language }`), `onWidgetGetImage`, `onSceneAction(key)` (throw = échec de cette action seulement), `requestWidgetRefresh` (1 / 10 s max, lève si déconnecté → try/catch), `handleShutdown`, `createLogger`.
-
-## 8. Points d'attention
-
-- **Sandbox des sous-conteneurs** : `CapDrop ALL` + `no-new-privileges`, réseau privé `gladys-int-<selector>` (alias DNS = `name`, d'où `http://mealie:9000`), pas de variables `GLADYS_*`, rootfs read-only par défaut (`read_only: false` pour mealie et bonap). Volumes montés depuis `<base>/external-integrations/<selector>/containers/<name><path>` → visibles par le principal sous `/data/containers/<name>/…`.
-- **Mealie** : l'entrypoint officiel fait `chown` + `gosu` vers PUID quand il tourne en root → impossible sans capabilities. `PUID=PGID=0` dans le manifeste fait sauter ce changement d'utilisateur (`[ "$(id -u)" = $PUID ]`). Root sans `CAP_DAC_OVERRIDE` ne peut pas écrire dans le dossier uid 1000 créé par Gladys → `prepareMealieDataDir` fait `chmod 777` sur `/data/containers/mealie/app/data` **avant** le start. Si ça casse avec une future image Mealie : image dérivée avec `USER 1000` + `PUID=1000`.
-- **Bonap** : nginx root → workers `setuid(nginx)`/`initgroups` impossibles sans capabilities. `docker/bonap/Dockerfile` retire `user`, met le pid dans `/tmp`, écoute sur **8080**, `chown 1000` de conf.d / html / cache / `/data` (settings BFF), `USER 1000`. Mettre à jour `BONAP_VERSION` quand Bonap sort une version.
-- **`startContainer` redémarre toujours** (et recrée si l'env change) → `ensureRunning` compare un hash de l'env stocké dans state.json + `status === 'running'` pour ne pas relancer Mealie/Bonap à chaque reconnexion.
-- **Secrets** : jamais dans le manifeste (public). Token Mealie → `env` runtime de `startContainer` ; identifiants gérés → `/data/state.json`.
-- **Widgets** : images ≤ 300 Ko, clé `^[a-z0-9][a-z0-9-]{0,63}$` et cache 1 h par clé → clé `r-<recipeId>-<sha1(image)[0:8]>` ; liens et boutons **https uniquement** (une URL Bonap en http n'est jamais liée) ; budget 8 composants / 1 focal. `validateWidgetContent` du SDK est utilisé dans les tests.
-- **Désinstallation = suppression de `/data`, donc de la base Mealie**. Documenté dans docs/*.md.
-- **Versions** : `package.json`, `version` du manifeste, tag de `docker_image` et tag de l'image `bonap` du manifeste doivent être identiques (test `manifest.test.ts`, bumpés ensemble par release.yml).
-- Messages affichés par Gladys = texte brut échappé, seuls les `\n` sont interprétés.
-- **Scene actions** : outputs = scalaires uniquement, filtrés par la liste `outputs` du manifeste (test `sceneActions.test.ts` vérifie que les clés retournées = clés déclarées, y compris l'état vide).
-- **Cover** : `cover.png` (800×534, < 150 Ko, logo Bonap sur fond #FFF4E6) servie depuis `raw.githubusercontent.com/.../main/cover.png`.
-- **Install depuis GitHub (repo_url)** : Gladys lit le manifeste sur la branche par défaut et **pull obligatoirement** les images (pas de repli sur une image locale, contrairement au mode développeur) → toujours publier les images (release) avant de pousser un manifeste qui les référence.
+- **Bonap sans capabilities** : nginx root → `setuid`/`initgroups` impossibles sans capabilities → `docker/bonap/Dockerfile` retire `user`, pid dans `/tmp`, écoute sur **8080**, `chown 1000` de conf.d / html / cache / `/data`, `USER 1000`. Validé sur un vrai Gladys. Mettre à jour `BONAP_VERSION` à chaque version de Bonap.
+- **Intégrations isolées** : Bonap ne résout pas `mealie:9000` de l'intégration Mealie → `http://<IP de la machine>:<port publié>`. Le conteneur Bonap (bridge Docker) joint ce port publié via l'IP LAN de l'hôte.
+- **Port hôte choisi par Gladys** (pas 8080) : Supervision (« Ouvrir Bonap »), section `access` (résolue au chargement de l'écran seulement).
+- **`startContainer` redémarre toujours** → `ensureRunning` compare un hash de l'env + `status === 'running'`.
+- **Secrets** : le token Mealie passe par l'`env` runtime de `startContainer`, jamais par le manifeste. Bonap l'injecte côté nginx : **Bonap installé = accès complet à Mealie sans authentification sur le LAN** (documenté).
+- **Widget** : TTL 300 s + `requestWidgetRefresh` après un ajout par scène ; liens **https uniquement** ; `value` tile + card-list (≤ 8 lignes) + caption de débordement ; `validateWidgetContent` dans les tests.
+- **Migration depuis 0.2.0** (Mealie + Bonap dans la même intégration) : le sous-conteneur `mealie` a disparu du manifeste → désinstaller l'ancienne intégration puis installer Mealie + Bonap (les données du Mealie de test sont perdues).
+- **Versions** : `package.json`, `version` du manifeste, tag de `docker_image` et tag de l'image `bonap` doivent être identiques (test + release.yml).
+- **Install depuis GitHub** : manifeste lu sur `main`, images **obligatoirement tirées** du registre → publier la release avant de pousser un manifeste qui les référence.

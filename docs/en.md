@@ -1,46 +1,35 @@
 # Bonap for Gladys Assistant
 
-Bonap is a meal planner built on top of [Mealie](https://mealie.io) (recipes and meal plan). This integration:
+**[Bonap](https://github.com/AymericLeFeyer/bonap) is the friendly interface for [Mealie](https://mealie.io)**: weekly meal planning in a few taps, recipes with pictures, a shopping list with your usual items, statistics and AI meal suggestions. This integration:
 
-- **installs Mealie and Bonap inside Gladys** if you don't run them yet, or connects to the ones you already have;
-- adds two dashboard **widgets**: "Next meal" and "Meal plan";
-- adds **scene actions** to use the menu in your scenes (Telegram message, announcement…).
+- **installs Bonap inside Gladys**, wired to your Mealie (or plugs into a Bonap you already run);
+- adds the **"Shopping list"** dashboard widget;
+- adds **scene actions**: add an item to the shopping list, get the list (to send it in a message, for instance).
+
+## Before you start: Mealie
+
+Bonap stores everything in Mealie. **No Mealie yet?** Install the [Mealie integration](https://github.com/AymericLeFeyer/gladys-mealie) from the Gladys catalog: it installs Mealie in one click and adds the "Next meal" and "Meal plan" widgets. In its configuration, click **"Create a token for Bonap"**: it shows the Mealie URL and an API token to paste here.
 
 ## Configuration
 
-### Mealie
+- **Mealie URL**: reachable from the Gladys machine, so an IP address (e.g. `http://192.168.1.10:38123`), **not** `localhost` nor `mealie:9000` (each Gladys integration has its own network). With the Mealie integration, replace `<Gladys IP address>` with the address of your Gladys machine.
+- **Mealie API token**: Mealie → Profile → API Tokens, or the Mealie integration button.
+- **Bonap**:
+  - **Install Bonap in Gladys** (default): Bonap is started and wired to Mealie. Its address is shown in the "Access" section and in the Supervision screen ("Open Bonap" link): Gladys picks the port itself.
+  - **I already have Bonap**: enter its URL. When it is `https://`, the widget shows an "Open Bonap" link.
 
-- **Install Mealie in Gladys** (default): Gladys starts Mealie, creates an API token and replaces the default admin password with a random one. The **"Show Mealie credentials"** button gives you the email and password to log in. The first start can take a few minutes.
-- **I already have Mealie**: enter the URL of your Mealie (reachable from the Gladys machine, so not `localhost`) and an API token (Mealie → Profile → API Tokens).
+## "Shopping list" widget
 
-### Bonap
-
-- **Install Bonap in Gladys**: Bonap is started and wired to Mealie automatically.
-- **I already have Bonap**: enter its URL. When it is `https://`, the widget shows an "Open Bonap" link.
-- **No Bonap**: only the widget is used.
-
-The addresses of the Mealie and Bonap installed by Gladys are shown in the "Access" section and in the Supervision screen ("Open" links).
-
-## Widgets
-
-On the dashboard, switch to edit mode and add a widget from the Extensions section:
-
-- **Next meal**: the next slot of the Mealie meal plan (breakfast until 10am, lunch until 2pm, snack until 5pm, dinner until 9pm) with the recipe picture and description. "Meals to show" setting: tick for instance only "Dinner" (empty = every meal).
-- **Meal plan**: the upcoming meals over 1 to 7 days ("Days" setting, 3 by default), 8 rows at most.
-
-Widgets refresh every 15 minutes.
+On the dashboard, switch to edit mode and add **Shopping list** (Extensions section): the number of items to buy and the first 8, with their aisle. "Shopping list" setting: the name of the Mealie list ("Bonap" by default, the one Bonap uses). Refreshed every 5 minutes and after every item added by a scene.
 
 ## Scenes
 
-Two actions are available in the scene editor ("Bonap" card):
+- **Add to the shopping list** (fields: item — scene variables accepted —, quantity, list) → outputs: `Item added`, `Items to buy`. The list is created when it does not exist.
+- **Get the shopping list** (field: list) → outputs: `Items to buy`, `List` (one item per line, "• milk").
 
-- **Get the next meal** (fields: meal type, language) → outputs: `Meal found`, `Meal name`, `Meal type`, `Day`, `Date`, `Summary` (e.g. "Today · Dinner: Roast chicken").
-- **Get the meals of the day** (fields: today or tomorrow, language) → outputs: `Number of meals`, `Meal names`, `Summary` (one line per meal, e.g. "Lunch: Quiche").
-
-Example: trigger "Every day at 11am" → "Get the meals of the day" → "Send a message" with the summary as a variable.
+Examples: a "More milk" button that adds "Milk"; leaving work, get the shopping list on Telegram.
 
 ## Good to know
 
-- The Mealie and Bonap installed by Gladys are reachable on your local network, **with no authentication on the Bonap side**: never expose those ports to the Internet.
-- **Uninstalling the integration deletes all its data, including the Mealie database.** Make a backup from Mealie (Settings → Backups) first.
-- Mealie needs about 1 GB of memory.
+- A Bonap installed by Gladys is reachable on your local network **without authentication** (the Mealie token is added server-side): never expose its port to the Internet.
+- AI suggestions are set up in Bonap → Settings (your AI provider key, stored in your browser).

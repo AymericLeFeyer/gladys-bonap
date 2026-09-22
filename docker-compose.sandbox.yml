@@ -1,9 +1,9 @@
 # Reproduces the Gladys sub-container sandbox (no capability, no privilege
 # escalation, 100 pids, noexec /tmp) to check that Mealie and Bonap start
-# under it, without Gladys. See README > "Tester le POC" > step 1.
+# under it, without Gladys. See README > "Tester".
 #
 #   ./scripts/sandbox.sh up          # prepares the volumes, then docker compose up
-#   npm run sandbox:bootstrap        # runs the integration's Mealie bootstrap
+#   MEALIE_TOKEN=<token> ./scripts/sandbox.sh bonap
 
 x-gladys-sandbox: &gladys-sandbox
   cap_drop: [ALL]

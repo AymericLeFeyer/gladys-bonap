@@ -2,15 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeConfig } from '../src/domain/config/config.ts';
 
-test('defaults to installing Mealie and Bonap', () => {
-  const config = normalizeConfig();
-  assert.equal(config.mealieMode, 'install');
-  assert.equal(config.bonapMode, 'install');
+test('defaults to installing Bonap', () => {
+  assert.equal(normalizeConfig().bonapMode, 'install');
 });
 
-test('trims URLs and tokens, drops trailing slashes', () => {
+test('trims URLs and the token, drops trailing slashes', () => {
   const config = normalizeConfig({
-    mealie_mode: 'existing',
     mealie_url: ' http://192.168.1.10:9000/ ',
     mealie_token: ' abc ',
     bonap_url: 'https://bonap.example.com//',
@@ -20,8 +17,6 @@ test('trims URLs and tokens, drops trailing slashes', () => {
   assert.equal(config.bonapUrl, 'https://bonap.example.com');
 });
 
-test('unknown modes fall back to the defaults', () => {
-  const config = normalizeConfig({ mealie_mode: 'cloud', bonap_mode: 42 });
-  assert.equal(config.mealieMode, 'install');
-  assert.equal(config.bonapMode, 'install');
+test('an unknown mode falls back to the default', () => {
+  assert.equal(normalizeConfig({ bonap_mode: 'none' }).bonapMode, 'install');
 });

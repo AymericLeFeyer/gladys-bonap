@@ -5,18 +5,19 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { MANIFEST_DEFAULTS } from '../src/domain/config/config.ts';
-import { NEXT_MEAL_WIDGET } from '../src/application/widget/nextMealWidget.ts';
-import { DEFAULT_PLAN_DAYS, MEAL_PLAN_WIDGET } from '../src/application/widget/mealPlanWidget.ts';
+import { SHOPPING_LIST_WIDGET } from '../src/application/widget/shoppingListWidget.ts';
 import {
-  GET_DAY_MEALS_ACTION,
-  GET_NEXT_MEAL_ACTION,
-} from '../src/application/scene/sceneActions.ts';
+  ADD_TO_SHOPPING_LIST_ACTION,
+  GET_SHOPPING_LIST_ACTION,
+} from '../src/application/shopping/shoppingList.ts';
+import { BONAP_LIST_NAME } from '../src/domain/shopping/ShoppingItem.ts';
 
 interface Field {
   key: string;
   type: string;
   default?: unknown;
   description?: Record<string, string>;
+  links?: Array<{ url: string }>;
 }
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -36,34 +37,36 @@ const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url
 };
 const index = await readFile(new URL('../index.ts', import.meta.url), 'utf8');
 
-test('every manifest action and widget has a handler in index.ts', () => {
+test('every manifest action, widget and scene action has a handler in index.ts', () => {
   for (const { key } of manifest.actions) {
     assert.ok(index.includes(`onAction('${key}'`), `action "${key}" has no handler`);
   }
   assert.deepEqual(
     manifest.widgets.map((w) => w.key),
-    [NEXT_MEAL_WIDGET, MEAL_PLAN_WIDGET],
+    [SHOPPING_LIST_WIDGET],
   );
-  for (const { key } of manifest.widgets) {
-    assert.ok(
-      index.includes(
-        `onWidgetGet(${key === NEXT_MEAL_WIDGET ? 'NEXT_MEAL_WIDGET' : 'MEAL_PLAN_WIDGET'}`,
-      ),
-    );
-  }
+  assert.ok(index.includes('onWidgetGet(SHOPPING_LIST_WIDGET'));
   assert.deepEqual(
     manifest.scene_actions.map((a) => a.key),
-    [GET_NEXT_MEAL_ACTION, GET_DAY_MEALS_ACTION],
+    [ADD_TO_SHOPPING_LIST_ACTION, GET_SHOPPING_LIST_ACTION],
   );
-  assert.ok(index.includes('onSceneAction(GET_NEXT_MEAL_ACTION'));
-  assert.ok(index.includes('onSceneAction(GET_DAY_MEALS_ACTION'));
+  assert.ok(index.includes('onSceneAction(ADD_TO_SHOPPING_LIST_ACTION'));
+  assert.ok(index.includes('onSceneAction(GET_SHOPPING_LIST_ACTION'));
 });
 
-test('widget settings defaults match the code defaults', () => {
-  const days = manifest.widgets
-    .find((w) => w.key === MEAL_PLAN_WIDGET)
-    ?.settings?.find((f) => f.key === 'days');
-  assert.equal(days?.default, String(DEFAULT_PLAN_DAYS));
+test('list_name defaults match the Bonap list', () => {
+  const fields = [
+    ...manifest.widgets.flatMap((w) => w.settings ?? []),
+    ...manifest.scene_actions.flatMap((a) => a.fields ?? []),
+  ].filter((f) => f.key === 'list_name');
+  assert.equal(fields.length, 3);
+  for (const field of fields) assert.equal(field.default, BONAP_LIST_NAME);
+});
+
+test('section links are https and point to the Mealie integration', () => {
+  const links = manifest.config_schema.flatMap((f) => f.links ?? []);
+  assert.ok(links.some((l) => l.url === 'https://github.com/AymericLeFeyer/gladys-mealie'));
+  for (const { url } of links) assert.match(url, /^https:\/\//);
 });
 
 test('config_schema defaults match the code defaults', () => {

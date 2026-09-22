@@ -2,7 +2,7 @@
   "name": "gladys-bonap",
   "version": "0.2.0",
   "private": true,
-  "description": "Gladys Assistant external integration for Bonap + Mealie: installs the stack and shows the next meal on the dashboard.",
+  "description": "Gladys Assistant external integration for Bonap: installs Bonap wired to Mealie, shopping list widget and scene actions.",
   "type": "module",
   "main": "index.ts",
   "scripts": {
@@ -12,8 +12,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "node --test \"test/**/*.test.ts\"",
-    "manifest:dev": "node scripts/dev-manifest.ts",
-    "sandbox:bootstrap": "node scripts/sandbox-bootstrap.ts"
+    "manifest:dev": "node scripts/dev-manifest.ts"
   },
   "engines": {
     "node": ">=24"

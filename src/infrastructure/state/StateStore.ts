@@ -1,19 +1,11 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
-/** Credentials of the Mealie instance installed (and bootstrapped) by the integration. */
-export interface ManagedMealieCredentials {
-  email: string;
-  password: string;
-  apiToken: string;
-}
-
 /**
  * Private state of the integration, persisted in its `/data` volume (never
  * shown to Gladys, removed with the integration).
  */
 export interface IntegrationState {
-  mealie?: ManagedMealieCredentials;
   /** Hash of the env each sub-container was last started with. */
   containerEnvHashes?: Record<string, string>;
 }

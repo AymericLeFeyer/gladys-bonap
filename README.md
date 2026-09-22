@@ -1,21 +1,25 @@
 # Bonap — intégration Gladys Assistant
 
-Intégration externe [Gladys Assistant](https://gladysassistant.com) (≥ 5.1) pour [Bonap](https://github.com/AymericLeFeyer/bonap) et [Mealie](https://mealie.io) :
+<p align="center"><img src="cover.png" alt="Bonap" width="480"></p>
 
-- demande à la configuration si l'utilisateur a déjà Mealie (URL + token) et Bonap (URL) ; **sinon, les installe dans Gladys** comme sous-conteneurs ;
-- ajoute deux widgets de tableau de bord, **« Prochain repas »** et **« Planning des repas »** ;
-- ajoute deux actions de scène, **« Obtenir le prochain repas »** et **« Obtenir les repas du jour »**.
+**[Bonap](https://github.com/AymericLeFeyer/bonap), l'interface conviviale pour [Mealie](https://mealie.io), dans [Gladys Assistant](https://gladysassistant.com) (≥ 5.1).** Planning des repas en quelques clics, recettes, liste de courses avec « Habituels », statistiques et suggestions IA.
+
+- **installe Bonap dans Gladys** comme sous-conteneur, relié à un Mealie (URL + token), ou se branche sur un Bonap existant ;
+- widget de tableau de bord **« Liste de courses »** ;
+- actions de scène **« Ajouter à la liste de courses »** et **« Obtenir la liste de courses »**.
+
+> 🥕 **Pas encore de Mealie ?** L'intégration sœur [gladys-mealie](https://github.com/AymericLeFeyer/gladys-mealie) l'installe en un clic (et ajoute les widgets « Prochain repas » / « Planning des repas »). Son bouton **« Créer un token pour Bonap »** donne l'URL et le token à coller ici.
 
 ```
-┌──────────── réseau privé gladys-int-<selector> ──────────────┐
-│  gladys-bonap (principal, Node 24 + SDK)                     │
-│    ├─ réconcilie la config → start/stop des sous-conteneurs  │
-│    ├─ bootstrap Mealie (token API + mot de passe aléatoire)  │
-│    └─ widgets + actions de scène ──► API Mealie              │
-│  mealie  (ghcr.io/mealie-recipes/mealie, port 9000)          │
-│  bonap   (gladys-bonap-web = Bonap sans root, port 8080)     │
-└──────────────────────────────────────────────────────────────┘
+┌── intégration Mealie ──────────┐        ┌── intégration Bonap (ce repo) ───────────┐
+│ mealie (port publié par Gladys)│◄───────│ gladys-bonap (principal)                 │
+│ widgets repas, scènes menus    │ http:// │   ├─ vérifie Mealie, pilote le conteneur │
+└────────────────────────────────┘ <IP>:  │   └─ widget + scènes liste de courses    │
+                                    port  │ bonap (gladys-bonap-web, port 8080)      │
+                                          └──────────────────────────────────────────┘
 ```
+
+Deux intégrations Gladys ne peuvent pas se parler directement (réseaux privés séparés) : Bonap joint Mealie par l'IP de la machine et le port publié.
 
 Doc utilisateur : [docs/fr.md](docs/fr.md) · [docs/en.md](docs/en.md). Doc technique : [CLAUDE.md](CLAUDE.md).
 
@@ -30,57 +34,23 @@ npm run lint
 
 ## Tester
 
-### Étape 1 — Mealie et Bonap dans le sandbox Gladys (sans Gladys)
-
-Le point le plus risqué est de savoir si Mealie et Bonap démarrent **sans aucune capability Linux**, comme Gladys lance ses sous-conteneurs. `docker-compose.sandbox.yml` reproduit ces contraintes (`cap_drop: ALL`, `no-new-privileges`, 100 pids, `/tmp` noexec).
-
-Sur une machine Linux avec Docker (ou WSL / Docker Desktop) :
+**Sans Gladys** : `docker-compose.sandbox.yml` reproduit le sandbox des sous-conteneurs Gladys (`cap_drop: ALL`, `no-new-privileges`, 100 pids, `/tmp` noexec) avec un Mealie de test.
 
 ```sh
-./scripts/sandbox.sh up            # lance Mealie dans le sandbox
-npm run sandbox:bootstrap          # bootstrap de l'intégration : token + mot de passe aléatoire,
-                                   # puis affiche le contenu du widget
-MEALIE_TOKEN=<token affiché> ./scripts/sandbox.sh bonap   # build + lance Bonap sans root
+./scripts/sandbox.sh up                             # Mealie → http://localhost:9000 (changeme@example.com / MyPassword)
+MEALIE_TOKEN=<token créé dans Mealie> ./scripts/sandbox.sh bonap   # Bonap sans root → http://localhost:8080
 ```
 
-À vérifier :
+**Dans Gladys** :
 
-- `docker compose -f docker-compose.sandbox.yml logs mealie` : pas d'erreur `Operation not permitted` / `Permission denied`, Mealie répond sur http://localhost:9000 ;
-- connexion à Mealie avec les identifiants affichés par le bootstrap, ajout d'une recette au planning, puis relance de `npm run sandbox:bootstrap` → le widget affiche ce repas ;
-- Bonap répond sur http://localhost:8080 et affiche les recettes de Mealie.
+1. installer l'intégration Mealie (`https://github.com/AymericLeFeyer/gladys-mealie`) et cliquer sur « Créer un token pour Bonap » ;
+2. **Intégrations → Installer depuis GitHub**, URL `https://github.com/AymericLeFeyer/gladys-bonap` (manifeste lu sur `main`, images tirées de ghcr : publier une release d'abord) ;
+3. coller l'URL (avec l'IP de la machine Gladys) et le token ; le statut passe à connecté, Supervision montre `bonap` avec « Ouvrir Bonap » ;
+4. ajouter le widget « Liste de courses », puis une scène manuelle « Ajouter à la liste de courses » → l'article apparaît dans Bonap et dans le widget.
 
-`./scripts/sandbox.sh down` pour arrêter ; `sandbox-data/` contient les données (à supprimer pour repartir de zéro).
-
-### Étape 2 — Dans Gladys (≥ 5.1), en mode développeur
-
-Gladys utilise une image locale quand le pull échoue, **pour les installations en mode développeur uniquement**. Sur la machine qui fait tourner Gladys :
-
-```sh
-docker build -t gladys-bonap:dev .
-docker build -t gladys-bonap-web:dev docker/bonap
-npm run manifest:dev               # affiche le manifeste qui pointe vers ces images locales
-```
-
-Plus simple, si le repo et les images sont publiés : **Intégrations → Installer depuis GitHub**, URL `https://github.com/AymericLeFeyer/gladys-bonap` (Gladys lit le manifeste sur `main` et tire les images de ghcr — pas d'image locale dans ce mode).
-
-Sinon, sans builder sur la machine Gladys : pousser le repo sur GitHub, lancer **Actions → Build and publish images → Run workflow** et copier le manifeste affiché dans le résumé du run.
-
-Puis dans Gladys : **Intégrations → Installer depuis GitHub → Mode développeur**, coller l'image (`gladys-bonap:dev`) et le manifeste.
-
-Scénarios à dérouler :
-
-1. **Tout installer** (configuration par défaut) → statut « Démarrage de Mealie… » puis connecté ; dans Supervision, les conteneurs `mealie` et `bonap` tournent, avec les liens « Ouvrir » ; le bouton « Afficher les identifiants Mealie » donne email + mot de passe.
-2. **Widget** → Tableau de bord → éditer → ajouter « Prochain repas » ; planifier un repas dans Mealie ou Bonap → il s'affiche (au plus tard 15 min après, ou tout de suite en rechargeant après une modification de config).
-3. **Mealie existant** → passer en « J'ai déjà Mealie », URL + token d'un autre Mealie → le conteneur `mealie` s'arrête, le widget lit l'autre Mealie, Bonap est recréé vers cette URL.
-4. **Pas de Bonap** → le conteneur `bonap` s'arrête, le widget fonctionne toujours.
-5. **Redémarrer l'intégration** → aucun conteneur n'est relancé inutilement (les logs indiquent seulement « Stack ready »).
-6. **Planning des repas** → ajouter le widget, régler 1 puis 7 jours.
-7. **Scène** → déclencheur manuel → « Obtenir les repas du jour » → « Envoyer un message » avec la variable « Résumé ».
+Pour des images construites localement : `docker build -t gladys-bonap:dev .`, `docker build -t gladys-bonap-web:dev docker/bonap`, `npm run manifest:dev`, puis **Mode développeur** dans la même fenêtre.
 
 ## Publication
 
-1. Ajouter le topic GitHub `gladys-assistant-integration` au repo.
-2. **Actions → Release → Run workflow** (patch / minor / major) : met à jour la version et les deux images dans `package.json` et le manifeste, crée le tag, publie `ghcr.io/aymericlefeyer/gladys-bonap` et `ghcr.io/aymericlefeyer/gladys-bonap-web` (amd64 + arm64).
-3. Les packages ghcr doivent être **publics** (c'est le cas : ils héritent de la visibilité du repo public).
-
-L'indexeur Gladys passe toutes les heures.
+1. **Actions → Release → Run workflow** (patch / minor / major) : met à jour la version et les deux images dans `package.json` et le manifeste, crée le tag, publie `ghcr.io/aymericlefeyer/gladys-bonap` et `ghcr.io/aymericlefeyer/gladys-bonap-web` (amd64 + arm64).
+2. Topic GitHub `gladys-assistant-integration` pour apparaître dans le catalogue Gladys (indexeur horaire).

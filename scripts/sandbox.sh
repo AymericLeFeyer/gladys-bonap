@@ -9,7 +9,7 @@ mkdir -p sandbox-data/containers/mealie/app/data sandbox-data/containers/bonap/d
 chmod 777 sandbox-data/containers/mealie/app/data
 
 case "${1:-up}" in
-  up) docker compose -f docker-compose.sandbox.yml up -d --build mealie && echo "Mealie: http://localhost:9000 (then: npm run sandbox:bootstrap)" ;;
+  up) docker compose -f docker-compose.sandbox.yml up -d --build mealie && echo "Mealie: http://localhost:9000 (changeme@example.com / MyPassword), create an API token in Profile" ;;
   bonap) docker compose -f docker-compose.sandbox.yml up -d --build bonap && echo "Bonap: http://localhost:8080" ;;
   down) docker compose -f docker-compose.sandbox.yml down ;;
   logs) docker compose -f docker-compose.sandbox.yml logs -f ;;

@@ -1,4 +1,4 @@
-import type { MealPlanEntry } from '../../domain/meal/MealPlanEntry.ts';
+import type { ShoppingItem } from '../../domain/shopping/ShoppingItem.ts';
 
 export class MealieApiError extends Error {
   readonly status: number | null;
@@ -10,23 +10,21 @@ export class MealieApiError extends Error {
   }
 }
 
-interface RawMealPlan {
-  id: number;
-  date: string;
-  entryType?: string;
-  title?: string;
-  recipe?: {
-    id: string;
-    slug: string;
-    name: string;
-    description?: string | null;
-    image?: string | null;
-  } | null;
+interface RawShoppingItem {
+  id: string;
+  shoppingListId: string;
+  checked: boolean;
+  position?: number;
+  display?: string | null;
+  note?: string | null;
+  quantity?: number | null;
+  food?: { name: string } | null;
+  label?: { name: string } | null;
 }
 
 const TIMEOUT_MS = 10_000;
 
-/** Minimal HTTP client of the Mealie API (v2/v3). */
+/** Minimal HTTP client of the Mealie API (v2/v3), shopping lists only. */
 export class MealieClient {
   readonly baseUrl: string;
   private readonly token: string | null;
@@ -36,94 +34,60 @@ export class MealieClient {
     this.token = token;
   }
 
-  withToken(token: string): MealieClient {
-    return new MealieClient(this.baseUrl, token);
-  }
-
-  /** true as soon as the API answers (used while Mealie boots). */
-  async isAlive(): Promise<boolean> {
-    try {
-      const res = await fetch(`${this.baseUrl}/api/app/about`, {
-        signal: AbortSignal.timeout(5_000),
-      });
-      return res.ok;
-    } catch {
-      return false;
-    }
-  }
-
-  /** Password login, returns a short-lived access token. */
-  async login(email: string, password: string): Promise<string> {
-    const body = new URLSearchParams({ username: email, password });
-    const data = await this.request<{ access_token: string }>('POST', '/api/auth/token', {
-      body,
-      auth: false,
-    });
-    return data.access_token;
-  }
-
-  /** Creates a long-lived API token for the authenticated user. */
-  async createApiToken(name: string): Promise<string> {
-    const data = await this.request<{ token: string }>('POST', '/api/users/api-tokens', {
-      json: { name },
-    });
-    return data.token;
-  }
-
-  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await this.request('PUT', '/api/users/password', {
-      json: { currentPassword, newPassword },
-    });
-  }
-
   async getSelf(): Promise<{ email: string; username: string }> {
     return this.request('GET', '/api/users/self');
   }
 
-  /** Meal plan entries between two local days (`YYYY-MM-DD`, inclusive). */
-  async getMealPlans(startDate: string, endDate: string): Promise<MealPlanEntry[]> {
-    const query = new URLSearchParams({
-      start_date: startDate,
-      end_date: endDate,
-      page: '1',
-      perPage: '-1',
-      orderBy: 'date',
-      orderDirection: 'asc',
-    });
-    const data = await this.request<{ items: RawMealPlan[] }>(
+  async getShoppingLists(): Promise<Array<{ id: string; name: string }>> {
+    const data = await this.request<{ items: Array<{ id: string; name: string }> }>(
       'GET',
-      `/api/households/mealplans?${query}`,
+      '/api/households/shopping/lists?page=1&perPage=-1',
     );
-    return data.items.map(toMealPlanEntry);
+    return data.items;
   }
 
-  /** Small WebP thumbnail of a recipe (Mealie's `min-original`). */
-  async getRecipeThumbnail(recipeId: string): Promise<Buffer> {
-    const res = await this.fetch(
+  async createShoppingList(name: string): Promise<{ id: string; name: string }> {
+    return this.request('POST', '/api/households/shopping/lists', { json: { name } });
+  }
+
+  async getShoppingItems(listId: string): Promise<ShoppingItem[]> {
+    const data = await this.request<{ listItems?: RawShoppingItem[] }>(
       'GET',
-      `/api/media/recipes/${encodeURIComponent(recipeId)}/images/min-original.webp`,
-      {},
+      `/api/households/shopping/lists/${encodeURIComponent(listId)}`,
     );
-    return Buffer.from(await res.arrayBuffer());
+    return (data.listItems ?? [])
+      .filter((i) => i.shoppingListId === listId)
+      .map((i) => ({
+        id: i.id,
+        text: (i.display || i.note || i.food?.name || '').trim(),
+        checked: i.checked,
+        position: i.position ?? 0,
+        label: i.label?.name ?? null,
+      }));
+  }
+
+  /** Free-text item, the way Bonap adds one (`isFood: false`). */
+  async addShoppingItem(listId: string, note: string, quantity?: number): Promise<void> {
+    await this.request('POST', '/api/households/shopping/items/create-bulk', {
+      json: [
+        {
+          shoppingListId: listId,
+          note,
+          checked: false,
+          isFood: false,
+          ...(quantity && quantity > 0 ? { quantity } : {}),
+        },
+      ],
+    });
   }
 
   private async request<T>(
     method: string,
     path: string,
-    options: { json?: unknown; body?: URLSearchParams; auth?: boolean } = {},
+    { json }: { json?: unknown } = {},
   ): Promise<T> {
-    const res = await this.fetch(method, path, options);
-    const text = await res.text();
-    return (text ? JSON.parse(text) : undefined) as T;
-  }
-
-  private async fetch(
-    method: string,
-    path: string,
-    { json, body, auth = true }: { json?: unknown; body?: URLSearchParams; auth?: boolean },
-  ): Promise<Response> {
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (auth && this.token) headers.Authorization = `Bearer ${this.token}`;
+    if (this.token) headers.Authorization = `Bearer ${this.token}`;
     if (json !== undefined) headers['Content-Type'] = 'application/json';
 
     let res: Response;
@@ -131,7 +95,7 @@ export class MealieClient {
       res = await fetch(`${this.baseUrl}${path}`, {
         method,
         headers,
-        body: json !== undefined ? JSON.stringify(json) : body,
+        body: json !== undefined ? JSON.stringify(json) : undefined,
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (err) {
@@ -146,24 +110,7 @@ export class MealieClient {
         res.status,
       );
     }
-    return res;
+    const text = await res.text();
+    return (text ? JSON.parse(text) : undefined) as T;
   }
-}
-
-function toMealPlanEntry(raw: RawMealPlan): MealPlanEntry {
-  return {
-    id: raw.id,
-    date: raw.date,
-    entryType: raw.entryType ?? 'dinner',
-    title: raw.title ?? '',
-    recipe: raw.recipe
-      ? {
-          id: raw.recipe.id,
-          slug: raw.recipe.slug,
-          name: raw.recipe.name,
-          description: raw.recipe.description ?? '',
-          image: raw.recipe.image ?? null,
-        }
-      : null,
-  };
 }

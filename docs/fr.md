@@ -1,46 +1,35 @@
 # Bonap pour Gladys Assistant
 
-Bonap est un planificateur de repas construit sur [Mealie](https://mealie.io) (recettes et planning). Cette intégration :
+**[Bonap](https://github.com/AymericLeFeyer/bonap) est l'interface conviviale pour [Mealie](https://mealie.io)** : planning des repas de la semaine en quelques clics, recettes avec photos, liste de courses avec vos « Habituels », statistiques et suggestions de repas par IA. Cette intégration :
 
-- **installe Mealie et Bonap dans Gladys** si vous ne les avez pas encore, ou se connecte à ceux que vous avez déjà ;
-- ajoute deux **widgets** au tableau de bord : « Prochain repas » et « Planning des repas » ;
-- ajoute des **actions de scène** pour utiliser le menu dans vos scènes (message Telegram, annonce…).
+- **installe Bonap dans Gladys**, relié à votre Mealie (ou se branche sur un Bonap que vous avez déjà) ;
+- ajoute le widget **« Liste de courses »** au tableau de bord ;
+- ajoute des **actions de scène** : ajouter un article à la liste de courses, obtenir la liste (pour l'envoyer par message, par exemple).
+
+## Avant de commencer : Mealie
+
+Bonap enregistre tout dans Mealie. **Pas encore de Mealie ?** Installez l'[intégration Mealie](https://github.com/AymericLeFeyer/gladys-mealie) depuis le catalogue Gladys : elle installe Mealie en un clic et ajoute les widgets « Prochain repas » et « Planning des repas ». Dans sa configuration, cliquez sur **« Créer un token pour Bonap »** : elle affiche l'URL de Mealie et un token API à coller ici.
 
 ## Configuration
 
-### Mealie
+- **URL de Mealie** : joignable depuis la machine Gladys, donc une adresse IP (ex. `http://192.168.1.10:38123`), **pas** `localhost` ni `mealie:9000` (chaque intégration Gladys a son propre réseau). Avec l'intégration Mealie, remplacez `<adresse IP de Gladys>` par l'adresse de votre machine Gladys.
+- **Token API Mealie** : Mealie → Profil → Tokens API, ou le bouton de l'intégration Mealie.
+- **Bonap** :
+  - **Installer Bonap dans Gladys** (par défaut) : Bonap est lancé et relié à Mealie. Son adresse est affichée dans la section « Accès » et dans l'écran Supervision (lien « Ouvrir Bonap ») : Gladys choisit lui-même le port.
+  - **J'ai déjà Bonap** : renseignez son URL. Si elle est en `https://`, le widget propose un lien « Ouvrir Bonap ».
 
-- **Installer Mealie dans Gladys** (par défaut) : Gladys lance Mealie, crée un token API et remplace le mot de passe administrateur par défaut par un mot de passe aléatoire. Le bouton **« Afficher les identifiants Mealie »** vous donne l'email et le mot de passe pour vous connecter. Le premier démarrage peut prendre quelques minutes.
-- **J'ai déjà Mealie** : renseignez l'URL de votre Mealie (joignable depuis la machine Gladys, donc pas `localhost`) et un token API (Mealie → Profil → Tokens API).
+## Widget « Liste de courses »
 
-### Bonap
-
-- **Installer Bonap dans Gladys** : Bonap est lancé et relié automatiquement à Mealie.
-- **J'ai déjà Bonap** : renseignez son URL. Si elle est en `https://`, le widget propose un lien « Ouvrir Bonap ».
-- **Pas de Bonap** : seul le widget est utilisé.
-
-Les adresses de Mealie et de Bonap installés par Gladys sont affichées dans la section « Accès » et dans l'écran Supervision (liens « Ouvrir »).
-
-## Widgets
-
-Dans le tableau de bord, passez en édition et ajoutez un widget de la section Extensions :
-
-- **Prochain repas** : le prochain créneau du planning Mealie (petit-déjeuner jusqu'à 10 h, déjeuner jusqu'à 14 h, goûter jusqu'à 17 h, dîner jusqu'à 21 h), avec la photo et la description de la recette. Réglage « Repas à afficher » : cochez par exemple seulement « Dîner » (vide = tous les repas).
-- **Planning des repas** : les repas à venir sur 1 à 7 jours (réglage « Jours », 3 par défaut), 8 lignes au maximum.
-
-Les widgets se mettent à jour toutes les 15 minutes.
+Dans le tableau de bord, passez en édition et ajoutez **Liste de courses** (section Extensions) : le nombre d'articles à acheter et les 8 premiers, avec leur rayon. Réglage « Liste de courses » : le nom de la liste Mealie (« Bonap » par défaut, celle qu'utilise Bonap). Mise à jour toutes les 5 minutes et après chaque ajout par une scène.
 
 ## Scènes
 
-Deux actions sont disponibles dans l'éditeur de scènes (carte « Bonap ») :
+- **Ajouter à la liste de courses** (champs : article — les variables de scène sont acceptées —, quantité, liste) → résultats : `Article ajouté`, `Articles à acheter`. La liste est créée si elle n'existe pas.
+- **Obtenir la liste de courses** (champ : liste) → résultats : `Articles à acheter`, `Liste` (un article par ligne, « • lait »).
 
-- **Obtenir le prochain repas** (champs : type de repas, langue) → résultats : `Repas trouvé`, `Nom du repas`, `Type de repas`, `Jour`, `Date`, `Résumé` (ex. « Aujourd'hui · Dîner : Poulet rôti »).
-- **Obtenir les repas du jour** (champs : aujourd'hui ou demain, langue) → résultats : `Nombre de repas`, `Noms des repas`, `Résumé` (une ligne par repas, ex. « Déjeuner : Quiche »).
-
-Exemple : déclencheur « Tous les jours à 11 h » → « Obtenir les repas du jour » → « Envoyer un message » avec le résumé en variable.
+Exemples : un bouton « Plus de lait » qui ajoute « Lait » ; en partant du travail, recevoir la liste de courses sur Telegram.
 
 ## Bon à savoir
 
-- Mealie et Bonap installés par Gladys sont accessibles sur votre réseau local, **sans authentification côté Bonap** : n'exposez pas ces ports sur Internet.
-- **Désinstaller l'intégration supprime toutes ses données, y compris la base Mealie.** Faites une sauvegarde depuis Mealie (Paramètres → Sauvegardes) avant.
-- Mealie a besoin d'environ 1 Go de mémoire.
+- Bonap installé par Gladys est accessible sur votre réseau local **sans authentification** (le token Mealie est ajouté côté serveur) : n'exposez pas son port sur Internet.
+- Les suggestions IA se configurent dans Bonap → Paramètres (clé de votre fournisseur IA, stockée dans votre navigateur).

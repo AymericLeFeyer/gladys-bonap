@@ -1,0 +1,175 @@
+{
+  "manifest_version": 1,
+  "type": "provider",
+  "name": "Bonap",
+  "description": {
+    "en": "Meal planning with Bonap and Mealie: install them in Gladys and see your next meal.",
+    "fr": "Planning repas avec Bonap et Mealie : installez-les dans Gladys et voyez votre prochain repas."
+  },
+  "version": "0.1.0",
+  "docker_image": "ghcr.io/aymericlefeyer/gladys-bonap:0.1.0",
+  "gladys_version": ">=5.1.0",
+  "categories": ["services"],
+  "config_schema": [
+    {
+      "key": "intro",
+      "type": "section",
+      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "description": {
+        "en": "Bonap is a meal planner built on top of Mealie (recipes + meal plan). If you already run Mealie, choose \"I already have Mealie\" and fill in its URL and an API token (Mealie > Profile > API Tokens). Otherwise Gladys installs Mealie for you and configures it automatically.",
+        "fr": "Bonap est un planificateur de repas construit sur Mealie (recettes + planning). Si vous avez déjà Mealie, choisissez « J'ai déjà Mealie » et renseignez son URL et un token API (Mealie > Profil > Tokens API). Sinon Gladys installe Mealie pour vous et le configure automatiquement."
+      },
+      "links": [
+        {
+          "url": "https://github.com/AymericLeFeyer/bonap",
+          "label": { "en": "Bonap", "fr": "Bonap" }
+        },
+        { "url": "https://mealie.io", "label": { "en": "Mealie", "fr": "Mealie" } }
+      ]
+    },
+    {
+      "key": "mealie_mode",
+      "type": "select",
+      "display": "radio",
+      "label": { "en": "Mealie", "fr": "Mealie" },
+      "required": true,
+      "default": "install",
+      "options": [
+        {
+          "value": "install",
+          "label": { "en": "Install Mealie in Gladys", "fr": "Installer Mealie dans Gladys" }
+        },
+        {
+          "value": "existing",
+          "label": { "en": "I already have Mealie", "fr": "J'ai déjà Mealie" }
+        }
+      ]
+    },
+    {
+      "key": "mealie_url",
+      "type": "string",
+      "label": {
+        "en": "Mealie URL (existing Mealie only)",
+        "fr": "URL de Mealie (Mealie existant uniquement)"
+      },
+      "placeholder": { "en": "http://192.168.1.10:9000", "fr": "http://192.168.1.10:9000" }
+    },
+    {
+      "key": "mealie_token",
+      "type": "secret",
+      "label": {
+        "en": "Mealie API token (existing Mealie only)",
+        "fr": "Token API Mealie (Mealie existant uniquement)"
+      }
+    },
+    {
+      "key": "bonap_mode",
+      "type": "select",
+      "display": "radio",
+      "label": { "en": "Bonap", "fr": "Bonap" },
+      "required": true,
+      "default": "install",
+      "options": [
+        {
+          "value": "install",
+          "label": { "en": "Install Bonap in Gladys", "fr": "Installer Bonap dans Gladys" }
+        },
+        {
+          "value": "existing",
+          "label": { "en": "I already have Bonap", "fr": "J'ai déjà Bonap" }
+        },
+        { "value": "none", "label": { "en": "No Bonap", "fr": "Pas de Bonap" } }
+      ]
+    },
+    {
+      "key": "bonap_url",
+      "type": "string",
+      "label": {
+        "en": "Bonap URL (existing Bonap only)",
+        "fr": "URL de Bonap (Bonap existant uniquement)"
+      },
+      "placeholder": { "en": "https://bonap.example.com", "fr": "https://bonap.example.com" }
+    },
+    {
+      "key": "access",
+      "type": "section",
+      "label": { "en": "Access", "fr": "Accès" },
+      "description": {
+        "en": "When installed by Gladys:\nMealie: http://{{gladys_host}}:{{port:mealie_ui}}\nBonap: http://{{gladys_host}}:{{port:bonap_ui}}\nThe Mealie login is shown by the \"Show Mealie credentials\" button below.",
+        "fr": "Quand ils sont installés par Gladys :\nMealie : http://{{gladys_host}}:{{port:mealie_ui}}\nBonap : http://{{gladys_host}}:{{port:bonap_ui}}\nLes identifiants Mealie s'affichent avec le bouton « Afficher les identifiants Mealie » ci-dessous."
+      }
+    }
+  ],
+  "actions": [
+    {
+      "key": "test_connection",
+      "label": { "en": "Test Mealie connection", "fr": "Tester la connexion à Mealie" },
+      "timeout_seconds": 20
+    },
+    {
+      "key": "mealie_credentials",
+      "label": { "en": "Show Mealie credentials", "fr": "Afficher les identifiants Mealie" },
+      "description": {
+        "en": "Only for a Mealie installed by Gladys.",
+        "fr": "Uniquement pour un Mealie installé par Gladys."
+      },
+      "timeout_seconds": 10
+    }
+  ],
+  "widgets": [
+    {
+      "key": "next_meal",
+      "label": { "en": "Next meal", "fr": "Prochain repas" },
+      "description": {
+        "en": "The next meal of your Mealie meal plan.",
+        "fr": "Le prochain repas de votre planning Mealie."
+      },
+      "icon": "coffee"
+    }
+  ],
+  "containers": [
+    {
+      "name": "mealie",
+      "docker_image": "ghcr.io/mealie-recipes/mealie:v3.19.2",
+      "start": "manual",
+      "env": {
+        "PUID": "0",
+        "PGID": "0",
+        "ALLOW_SIGNUP": "false",
+        "DATA_DIR": "/app/data",
+        "UVICORN_WORKERS": "1"
+      },
+      "volumes": ["/app/data"],
+      "read_only": false,
+      "memory_mb": 1024,
+      "cpu": 1,
+      "ports": [
+        {
+          "container_port": 9000,
+          "protocol": "tcp",
+          "name": "mealie_ui",
+          "label": { "en": "Mealie", "fr": "Mealie" },
+          "browsable": true
+        }
+      ]
+    },
+    {
+      "name": "bonap",
+      "docker_image": "ghcr.io/aymericlefeyer/gladys-bonap-web:0.1.0",
+      "start": "manual",
+      "volumes": ["/data"],
+      "read_only": false,
+      "memory_mb": 256,
+      "cpu": 0.5,
+      "ports": [
+        {
+          "container_port": 8080,
+          "protocol": "tcp",
+          "name": "bonap_ui",
+          "label": { "en": "Bonap", "fr": "Bonap" },
+          "browsable": true
+        }
+      ]
+    }
+  ]
+}

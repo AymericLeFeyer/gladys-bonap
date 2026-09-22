@@ -1,0 +1,46 @@
+# Reproduces the Gladys sub-container sandbox (no capability, no privilege
+# escalation, 100 pids, noexec /tmp) to check that Mealie and Bonap start
+# under it, without Gladys. See README > "Tester le POC" > step 1.
+#
+#   ./scripts/sandbox.sh up          # prepares the volumes, then docker compose up
+#   npm run sandbox:bootstrap        # runs the integration's Mealie bootstrap
+
+x-gladys-sandbox: &gladys-sandbox
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  pids_limit: 100
+  tmpfs:
+    - /tmp:noexec,nosuid,size=64m
+
+services:
+  mealie:
+    <<: *gladys-sandbox
+    image: ghcr.io/mealie-recipes/mealie:v3.19.2
+    environment:
+      PUID: '0'
+      PGID: '0'
+      ALLOW_SIGNUP: 'false'
+      DATA_DIR: /app/data
+      UVICORN_WORKERS: '1'
+      TZ: Europe/Paris
+    volumes:
+      - ./sandbox-data/containers/mealie/app/data:/app/data
+    mem_limit: 1g
+    ports:
+      - '9000:9000'
+
+  bonap:
+    <<: *gladys-sandbox
+    build: docker/bonap
+    image: gladys-bonap-web:dev
+    environment:
+      VITE_MEALIE_URL: http://mealie:9000
+      VITE_MEALIE_TOKEN: ${MEALIE_TOKEN:-}
+      TZ: Europe/Paris
+    volumes:
+      - ./sandbox-data/containers/bonap/data:/data
+    mem_limit: 256m
+    ports:
+      - '8080:8080'
+    depends_on:
+      - mealie

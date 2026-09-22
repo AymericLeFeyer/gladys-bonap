@@ -1,0 +1,35 @@
+{
+  "name": "gladys-bonap",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gladys Assistant external integration for Bonap + Mealie: installs the stack and shows the next meal on the dashboard.",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "start": "node index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "manifest:dev": "node scripts/dev-manifest.ts",
+    "sandbox:bootstrap": "node scripts/sandbox-bootstrap.ts"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@gladysassistant/integration-sdk": "^0.14.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.0.0",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.5",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.40.0"
+  },
+  "license": "Apache-2.0"
+}

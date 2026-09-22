@@ -1,0 +1,103 @@
+# Builds and publishes the two images of the integration (amd64 + arm64):
+#   ghcr.io/<owner>/gladys-bonap      the main container (Node + SDK)
+#   ghcr.io/<owner>/gladys-bonap-web  Bonap adapted to the Gladys sandbox
+#
+# Triggers: a `vX.Y.Z` tag, a manual run (test build tagged with the branch
+# name or the `image-tag` input, never `latest`), or release.yml.
+name: Build and publish images
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      image-tag:
+        description: 'Image tag to publish (defaults to the branch name)'
+        required: false
+        default: ''
+  workflow_call:
+    inputs:
+      version:
+        description: 'Released version, e.g. 1.2.0 (publishes :<version> + :latest)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - image: gladys-bonap
+            context: .
+          - image: gladys-bonap-web
+            context: docker/bonap
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version != '' && format('v{0}', inputs.version) || '' }}
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags
+        id: meta
+        env:
+          IMAGE_NAME: ${{ matrix.image }}
+          INPUT_IMAGE_TAG: ${{ inputs.image-tag }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}"
+          if [ -n "$INPUT_VERSION" ]; then
+            version="$INPUT_VERSION"
+            tags="${image}:${version},${image}:latest"
+          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            version="${INPUT_IMAGE_TAG:-${GITHUB_REF_NAME//\//-}}"
+            if [ "$version" = "latest" ]; then
+              echo "::error::Cannot use 'latest' as a manual image tag."
+              exit 1
+            fi
+            tags="${image}:${version}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+            tags="${image}:${version},${image}:latest"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Manifest to paste in Gladys (developer mode)
+        if: matrix.image == 'gladys-bonap'
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          manifest=$(jq --arg main "ghcr.io/${owner}/gladys-bonap:${VERSION}" \
+            --arg web "ghcr.io/${owner}/gladys-bonap-web:${VERSION}" \
+            '.docker_image = $main | (.containers[] | select(.name == "bonap") | .docker_image) = $web' \
+            gladys-assistant-integration.json)
+          {
+            echo "## Test this build in Gladys"
+            echo ""
+            echo "Integrations → Install from GitHub → Developer mode, then paste:"
+            echo ""
+            echo '```json'
+            echo "$manifest"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

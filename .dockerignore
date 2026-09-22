@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log*
+.git
+.github
+.env
+.env.*
+data
+sandbox-data
+test
+docker
+docs
+scripts
+*.log
+.DS_Store
+README.md
+CLAUDE.md

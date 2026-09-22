@@ -6,6 +6,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { MANIFEST_DEFAULTS } from '../src/domain/config/config.ts';
 import { NEXT_MEAL_WIDGET } from '../src/application/widget/nextMealWidget.ts';
+import { DEFAULT_PLAN_DAYS, MEAL_PLAN_WIDGET } from '../src/application/widget/mealPlanWidget.ts';
+import {
+  GET_DAY_MEALS_ACTION,
+  GET_NEXT_MEAL_ACTION,
+} from '../src/application/scene/sceneActions.ts';
 
 interface Field {
   key: string;
@@ -22,7 +27,8 @@ const manifest = JSON.parse(
   description: Record<string, string>;
   config_schema: Field[];
   actions: Array<{ key: string }>;
-  widgets: Array<{ key: string }>;
+  widgets: Array<{ key: string; settings?: Field[] }>;
+  scene_actions: Array<{ key: string; fields?: Field[]; outputs: Array<{ key: string }> }>;
   containers: Array<{ name: string; docker_image: string; ports?: Array<{ name?: string }> }>;
 };
 const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as {
@@ -36,8 +42,28 @@ test('every manifest action and widget has a handler in index.ts', () => {
   }
   assert.deepEqual(
     manifest.widgets.map((w) => w.key),
-    [NEXT_MEAL_WIDGET],
+    [NEXT_MEAL_WIDGET, MEAL_PLAN_WIDGET],
   );
+  for (const { key } of manifest.widgets) {
+    assert.ok(
+      index.includes(
+        `onWidgetGet(${key === NEXT_MEAL_WIDGET ? 'NEXT_MEAL_WIDGET' : 'MEAL_PLAN_WIDGET'}`,
+      ),
+    );
+  }
+  assert.deepEqual(
+    manifest.scene_actions.map((a) => a.key),
+    [GET_NEXT_MEAL_ACTION, GET_DAY_MEALS_ACTION],
+  );
+  assert.ok(index.includes('onSceneAction(GET_NEXT_MEAL_ACTION'));
+  assert.ok(index.includes('onSceneAction(GET_DAY_MEALS_ACTION'));
+});
+
+test('widget settings defaults match the code defaults', () => {
+  const days = manifest.widgets
+    .find((w) => w.key === MEAL_PLAN_WIDGET)
+    ?.settings?.find((f) => f.key === 'days');
+  assert.equal(days?.default, String(DEFAULT_PLAN_DAYS));
 });
 
 test('config_schema defaults match the code defaults', () => {

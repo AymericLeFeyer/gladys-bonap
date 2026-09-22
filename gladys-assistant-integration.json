@@ -9,12 +9,16 @@
   "version": "0.1.0",
   "docker_image": "ghcr.io/aymericlefeyer/gladys-bonap:0.1.0",
   "gladys_version": ">=5.1.0",
+  "cover_image": "https://raw.githubusercontent.com/AymericLeFeyer/gladys-bonap/main/cover.png",
   "categories": ["services"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Getting started",
+        "fr": "Pour commencer"
+      },
       "description": {
         "en": "Bonap is a meal planner built on top of Mealie (recipes + meal plan). If you already run Mealie, choose \"I already have Mealie\" and fill in its URL and an API token (Mealie > Profile > API Tokens). Otherwise Gladys installs Mealie for you and configures it automatically.",
         "fr": "Bonap est un planificateur de repas construit sur Mealie (recettes + planning). Si vous avez déjà Mealie, choisissez « J'ai déjà Mealie » et renseignez son URL et un token API (Mealie > Profil > Tokens API). Sinon Gladys installe Mealie pour vous et le configure automatiquement."
@@ -22,26 +26,44 @@
       "links": [
         {
           "url": "https://github.com/AymericLeFeyer/bonap",
-          "label": { "en": "Bonap", "fr": "Bonap" }
+          "label": {
+            "en": "Bonap",
+            "fr": "Bonap"
+          }
         },
-        { "url": "https://mealie.io", "label": { "en": "Mealie", "fr": "Mealie" } }
+        {
+          "url": "https://mealie.io",
+          "label": {
+            "en": "Mealie",
+            "fr": "Mealie"
+          }
+        }
       ]
     },
     {
       "key": "mealie_mode",
       "type": "select",
       "display": "radio",
-      "label": { "en": "Mealie", "fr": "Mealie" },
+      "label": {
+        "en": "Mealie",
+        "fr": "Mealie"
+      },
       "required": true,
       "default": "install",
       "options": [
         {
           "value": "install",
-          "label": { "en": "Install Mealie in Gladys", "fr": "Installer Mealie dans Gladys" }
+          "label": {
+            "en": "Install Mealie in Gladys",
+            "fr": "Installer Mealie dans Gladys"
+          }
         },
         {
           "value": "existing",
-          "label": { "en": "I already have Mealie", "fr": "J'ai déjà Mealie" }
+          "label": {
+            "en": "I already have Mealie",
+            "fr": "J'ai déjà Mealie"
+          }
         }
       ]
     },
@@ -52,7 +74,10 @@
         "en": "Mealie URL (existing Mealie only)",
         "fr": "URL de Mealie (Mealie existant uniquement)"
       },
-      "placeholder": { "en": "http://192.168.1.10:9000", "fr": "http://192.168.1.10:9000" }
+      "placeholder": {
+        "en": "http://192.168.1.10:9000",
+        "fr": "http://192.168.1.10:9000"
+      }
     },
     {
       "key": "mealie_token",
@@ -66,19 +91,34 @@
       "key": "bonap_mode",
       "type": "select",
       "display": "radio",
-      "label": { "en": "Bonap", "fr": "Bonap" },
+      "label": {
+        "en": "Bonap",
+        "fr": "Bonap"
+      },
       "required": true,
       "default": "install",
       "options": [
         {
           "value": "install",
-          "label": { "en": "Install Bonap in Gladys", "fr": "Installer Bonap dans Gladys" }
+          "label": {
+            "en": "Install Bonap in Gladys",
+            "fr": "Installer Bonap dans Gladys"
+          }
         },
         {
           "value": "existing",
-          "label": { "en": "I already have Bonap", "fr": "J'ai déjà Bonap" }
+          "label": {
+            "en": "I already have Bonap",
+            "fr": "J'ai déjà Bonap"
+          }
         },
-        { "value": "none", "label": { "en": "No Bonap", "fr": "Pas de Bonap" } }
+        {
+          "value": "none",
+          "label": {
+            "en": "No Bonap",
+            "fr": "Pas de Bonap"
+          }
+        }
       ]
     },
     {
@@ -88,12 +128,18 @@
         "en": "Bonap URL (existing Bonap only)",
         "fr": "URL de Bonap (Bonap existant uniquement)"
       },
-      "placeholder": { "en": "https://bonap.example.com", "fr": "https://bonap.example.com" }
+      "placeholder": {
+        "en": "https://bonap.example.com",
+        "fr": "https://bonap.example.com"
+      }
     },
     {
       "key": "access",
       "type": "section",
-      "label": { "en": "Access", "fr": "Accès" },
+      "label": {
+        "en": "Access",
+        "fr": "Accès"
+      },
       "description": {
         "en": "When installed by Gladys:\nMealie: http://{{gladys_host}}:{{port:mealie_ui}}\nBonap: http://{{gladys_host}}:{{port:bonap_ui}}\nThe Mealie login is shown by the \"Show Mealie credentials\" button below.",
         "fr": "Quand ils sont installés par Gladys :\nMealie : http://{{gladys_host}}:{{port:mealie_ui}}\nBonap : http://{{gladys_host}}:{{port:bonap_ui}}\nLes identifiants Mealie s'affichent avec le bouton « Afficher les identifiants Mealie » ci-dessous."
@@ -103,12 +149,18 @@
   "actions": [
     {
       "key": "test_connection",
-      "label": { "en": "Test Mealie connection", "fr": "Tester la connexion à Mealie" },
+      "label": {
+        "en": "Test Mealie connection",
+        "fr": "Tester la connexion à Mealie"
+      },
       "timeout_seconds": 20
     },
     {
       "key": "mealie_credentials",
-      "label": { "en": "Show Mealie credentials", "fr": "Afficher les identifiants Mealie" },
+      "label": {
+        "en": "Show Mealie credentials",
+        "fr": "Afficher les identifiants Mealie"
+      },
       "description": {
         "en": "Only for a Mealie installed by Gladys.",
         "fr": "Uniquement pour un Mealie installé par Gladys."
@@ -119,12 +171,407 @@
   "widgets": [
     {
       "key": "next_meal",
-      "label": { "en": "Next meal", "fr": "Prochain repas" },
+      "label": {
+        "en": "Next meal",
+        "fr": "Prochain repas"
+      },
       "description": {
         "en": "The next meal of your Mealie meal plan.",
         "fr": "Le prochain repas de votre planning Mealie."
       },
-      "icon": "coffee"
+      "icon": "coffee",
+      "settings": [
+        {
+          "key": "meal_types",
+          "type": "multi_select",
+          "label": {
+            "en": "Meals to show",
+            "fr": "Repas à afficher"
+          },
+          "description": {
+            "en": "Leave empty to show every meal.",
+            "fr": "Laissez vide pour afficher tous les repas."
+          },
+          "options": [
+            {
+              "value": "breakfast",
+              "label": {
+                "en": "Breakfast",
+                "fr": "Petit-déjeuner"
+              }
+            },
+            {
+              "value": "lunch",
+              "label": {
+                "en": "Lunch",
+                "fr": "Déjeuner"
+              }
+            },
+            {
+              "value": "dinner",
+              "label": {
+                "en": "Dinner",
+                "fr": "Dîner"
+              }
+            },
+            {
+              "value": "snack",
+              "label": {
+                "en": "Snack",
+                "fr": "Goûter"
+              }
+            },
+            {
+              "value": "side",
+              "label": {
+                "en": "Side",
+                "fr": "Accompagnement"
+              }
+            },
+            {
+              "value": "dessert",
+              "label": {
+                "en": "Dessert",
+                "fr": "Dessert"
+              }
+            },
+            {
+              "value": "drink",
+              "label": {
+                "en": "Drink",
+                "fr": "Boisson"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "meal_plan",
+      "label": {
+        "en": "Meal plan",
+        "fr": "Planning des repas"
+      },
+      "description": {
+        "en": "The upcoming meals of the next days.",
+        "fr": "Les repas à venir des prochains jours."
+      },
+      "icon": "calendar",
+      "settings": [
+        {
+          "key": "days",
+          "type": "select",
+          "label": {
+            "en": "Days",
+            "fr": "Jours"
+          },
+          "required": true,
+          "default": "3",
+          "options": [
+            {
+              "value": "1",
+              "label": {
+                "en": "1 day",
+                "fr": "1 jour"
+              }
+            },
+            {
+              "value": "2",
+              "label": {
+                "en": "2 days",
+                "fr": "2 jours"
+              }
+            },
+            {
+              "value": "3",
+              "label": {
+                "en": "3 days",
+                "fr": "3 jours"
+              }
+            },
+            {
+              "value": "4",
+              "label": {
+                "en": "4 days",
+                "fr": "4 jours"
+              }
+            },
+            {
+              "value": "5",
+              "label": {
+                "en": "5 days",
+                "fr": "5 jours"
+              }
+            },
+            {
+              "value": "6",
+              "label": {
+                "en": "6 days",
+                "fr": "6 jours"
+              }
+            },
+            {
+              "value": "7",
+              "label": {
+                "en": "7 days",
+                "fr": "7 jours"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "scene_actions": [
+    {
+      "key": "get_next_meal",
+      "label": {
+        "en": "Get the next meal",
+        "fr": "Obtenir le prochain repas"
+      },
+      "description": {
+        "en": "Reads the next meal of the Mealie meal plan, for instance to send it in a message.",
+        "fr": "Lit le prochain repas du planning Mealie, par exemple pour l'envoyer dans un message."
+      },
+      "timeout_seconds": 20,
+      "fields": [
+        {
+          "key": "meal_type",
+          "type": "select",
+          "label": {
+            "en": "Meal",
+            "fr": "Repas"
+          },
+          "required": true,
+          "default": "any",
+          "options": [
+            {
+              "value": "any",
+              "label": {
+                "en": "Any meal",
+                "fr": "N'importe quel repas"
+              }
+            },
+            {
+              "value": "breakfast",
+              "label": {
+                "en": "Breakfast",
+                "fr": "Petit-déjeuner"
+              }
+            },
+            {
+              "value": "lunch",
+              "label": {
+                "en": "Lunch",
+                "fr": "Déjeuner"
+              }
+            },
+            {
+              "value": "dinner",
+              "label": {
+                "en": "Dinner",
+                "fr": "Dîner"
+              }
+            },
+            {
+              "value": "snack",
+              "label": {
+                "en": "Snack",
+                "fr": "Goûter"
+              }
+            },
+            {
+              "value": "side",
+              "label": {
+                "en": "Side",
+                "fr": "Accompagnement"
+              }
+            },
+            {
+              "value": "dessert",
+              "label": {
+                "en": "Dessert",
+                "fr": "Dessert"
+              }
+            },
+            {
+              "value": "drink",
+              "label": {
+                "en": "Drink",
+                "fr": "Boisson"
+              }
+            }
+          ]
+        },
+        {
+          "key": "language",
+          "type": "select",
+          "label": {
+            "en": "Language",
+            "fr": "Langue"
+          },
+          "required": true,
+          "default": "fr",
+          "options": [
+            {
+              "value": "fr",
+              "label": {
+                "en": "French",
+                "fr": "Français"
+              }
+            },
+            {
+              "value": "en",
+              "label": {
+                "en": "English",
+                "fr": "Anglais"
+              }
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "found",
+          "type": "boolean",
+          "label": {
+            "en": "Meal found",
+            "fr": "Repas trouvé"
+          }
+        },
+        {
+          "key": "name",
+          "type": "string",
+          "label": {
+            "en": "Meal name",
+            "fr": "Nom du repas"
+          }
+        },
+        {
+          "key": "meal_type",
+          "type": "string",
+          "label": {
+            "en": "Meal type",
+            "fr": "Type de repas"
+          }
+        },
+        {
+          "key": "day",
+          "type": "string",
+          "label": {
+            "en": "Day",
+            "fr": "Jour"
+          }
+        },
+        {
+          "key": "date",
+          "type": "string",
+          "label": {
+            "en": "Date (YYYY-MM-DD)",
+            "fr": "Date (AAAA-MM-JJ)"
+          }
+        },
+        {
+          "key": "summary",
+          "type": "string",
+          "label": {
+            "en": "Summary",
+            "fr": "Résumé"
+          }
+        }
+      ]
+    },
+    {
+      "key": "get_day_meals",
+      "label": {
+        "en": "Get the meals of the day",
+        "fr": "Obtenir les repas du jour"
+      },
+      "description": {
+        "en": "Lists the meals planned today or tomorrow.",
+        "fr": "Liste les repas prévus aujourd'hui ou demain."
+      },
+      "timeout_seconds": 20,
+      "fields": [
+        {
+          "key": "day",
+          "type": "select",
+          "label": {
+            "en": "Day",
+            "fr": "Jour"
+          },
+          "required": true,
+          "default": "today",
+          "options": [
+            {
+              "value": "today",
+              "label": {
+                "en": "Today",
+                "fr": "Aujourd'hui"
+              }
+            },
+            {
+              "value": "tomorrow",
+              "label": {
+                "en": "Tomorrow",
+                "fr": "Demain"
+              }
+            }
+          ]
+        },
+        {
+          "key": "language",
+          "type": "select",
+          "label": {
+            "en": "Language",
+            "fr": "Langue"
+          },
+          "required": true,
+          "default": "fr",
+          "options": [
+            {
+              "value": "fr",
+              "label": {
+                "en": "French",
+                "fr": "Français"
+              }
+            },
+            {
+              "value": "en",
+              "label": {
+                "en": "English",
+                "fr": "Anglais"
+              }
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "count",
+          "type": "number",
+          "label": {
+            "en": "Number of meals",
+            "fr": "Nombre de repas"
+          }
+        },
+        {
+          "key": "names",
+          "type": "string",
+          "label": {
+            "en": "Meal names",
+            "fr": "Noms des repas"
+          }
+        },
+        {
+          "key": "summary",
+          "type": "string",
+          "label": {
+            "en": "Summary (one line per meal)",
+            "fr": "Résumé (une ligne par repas)"
+          }
+        }
+      ]
     }
   ],
   "containers": [
@@ -148,7 +595,10 @@
           "container_port": 9000,
           "protocol": "tcp",
           "name": "mealie_ui",
-          "label": { "en": "Mealie", "fr": "Mealie" },
+          "label": {
+            "en": "Mealie",
+            "fr": "Mealie"
+          },
           "browsable": true
         }
       ]
@@ -166,7 +616,10 @@
           "container_port": 8080,
           "protocol": "tcp",
           "name": "bonap_ui",
-          "label": { "en": "Bonap", "fr": "Bonap" },
+          "label": {
+            "en": "Bonap",
+            "fr": "Bonap"
+          },
           "browsable": true
         }
       ]

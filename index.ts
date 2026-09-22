@@ -1,17 +1,30 @@
 // Entry point of the Bonap integration for Gladys: wires the SDK handlers to
 // the use cases. The stack (Mealie + Bonap sub-containers) is reconciled on
-// every connection and configuration change; the widget reads the meal plan.
+// every connection and configuration change; widgets and scene actions read
+// the meal plan.
 
 import { GladysIntegration, createLogger } from '@gladysassistant/integration-sdk';
 import { normalizeConfig, type BonapConfig } from './src/domain/config/config.ts';
+import type { MealPlanEntry } from './src/domain/meal/MealPlanEntry.ts';
 import { addDays, findNextMeal, toLocalDay } from './src/domain/meal/nextMeal.ts';
 import { reconcileStack, type Message } from './src/application/stack/reconcileStack.ts';
+import { buildMessageContent, parseRecipeImageKey } from './src/application/widget/common.ts';
 import {
   NEXT_MEAL_WIDGET,
-  buildMessageContent,
   buildNextMealContent,
-  parseRecipeImageKey,
+  readMealTypes,
 } from './src/application/widget/nextMealWidget.ts';
+import {
+  MEAL_PLAN_WIDGET,
+  buildMealPlanContent,
+  readPlanDays,
+} from './src/application/widget/mealPlanWidget.ts';
+import {
+  GET_DAY_MEALS_ACTION,
+  GET_NEXT_MEAL_ACTION,
+  getDayMealsOutputs,
+  getNextMealOutputs,
+} from './src/application/scene/sceneActions.ts';
 import type { MealieClient } from './src/infrastructure/mealie/MealieClient.ts';
 import { StateStore } from './src/infrastructure/state/StateStore.ts';
 
@@ -31,6 +44,20 @@ const NOT_READY: Message = {
   en: 'Bonap is not ready yet: check the integration configuration.',
   fr: "Bonap n'est pas encore prêt : vérifiez la configuration de l'intégration.",
 };
+const UNREACHABLE: Message = {
+  en: 'Mealie is unreachable right now.',
+  fr: 'Mealie est injoignable pour le moment.',
+};
+
+/** Meal plan from today to today + 7 (the widest range any feature needs). */
+async function fetchMealPlan(client: MealieClient, now: Date): Promise<MealPlanEntry[]> {
+  return client.getMealPlans(toLocalDay(now), toLocalDay(addDays(now, 7)));
+}
+
+/** Widget links need https: only an existing Bonap can have such a URL. */
+function bonapUrl(): string | undefined {
+  return config.bonapMode === 'existing' ? config.bonapUrl : undefined;
+}
 
 // --- Stack reconciliation ------------------------------------------------------
 // Serialized: a config change during a (long) first Mealie boot waits for the
@@ -55,7 +82,7 @@ function scheduleReconcile(reason: string): void {
         log.warn(`Stack not ready: ${result.message.en}`);
         await gladys.setConnectionStatus(false, result.message);
       }
-      refreshWidget();
+      refreshWidgets();
     })
     .catch(async (err: unknown) => {
       log.error('Stack reconciliation failed', err);
@@ -69,11 +96,13 @@ function scheduleReconcile(reason: string): void {
     });
 }
 
-function refreshWidget(): void {
-  try {
-    gladys.requestWidgetRefresh(NEXT_MEAL_WIDGET);
-  } catch (err) {
-    log.debug('Widget refresh nudge dropped', err);
+function refreshWidgets(): void {
+  for (const key of [NEXT_MEAL_WIDGET, MEAL_PLAN_WIDGET]) {
+    try {
+      gladys.requestWidgetRefresh(key);
+    } catch (err) {
+      log.debug(`Widget ${key} refresh nudge dropped`, err);
+    }
   }
 }
 
@@ -115,21 +144,31 @@ gladys.onAction('mealie_credentials', async () => {
   };
 });
 
-// --- Dashboard widget ----------------------------------------------------------
-gladys.onWidgetGet(NEXT_MEAL_WIDGET, async ({ language }) => {
+// --- Dashboard widgets ---------------------------------------------------------
+gladys.onWidgetGet(NEXT_MEAL_WIDGET, async ({ settings, language }) => {
   if (!mealie) return buildMessageContent(NOT_READY, language);
   const now = new Date();
   try {
-    const entries = await mealie.getMealPlans(toLocalDay(now), toLocalDay(addDays(now, 7)));
-    return buildNextMealContent(findNextMeal(entries, now), now, language, {
-      bonapUrl: config.bonapMode === 'existing' ? config.bonapUrl : undefined,
+    const entries = await fetchMealPlan(mealie, now);
+    const next = findNextMeal(entries, now, readMealTypes(settings));
+    return buildNextMealContent(next, now, language, { bonapUrl: bonapUrl() });
+  } catch (err) {
+    log.warn('Unable to read the meal plan', err);
+    return buildMessageContent(UNREACHABLE, language);
+  }
+});
+
+gladys.onWidgetGet(MEAL_PLAN_WIDGET, async ({ settings, language }) => {
+  if (!mealie) return buildMessageContent(NOT_READY, language);
+  const now = new Date();
+  try {
+    const entries = await fetchMealPlan(mealie, now);
+    return buildMealPlanContent(entries, now, readPlanDays(settings), language, {
+      bonapUrl: bonapUrl(),
     });
   } catch (err) {
     log.warn('Unable to read the meal plan', err);
-    return buildMessageContent(
-      { en: 'Mealie is unreachable right now.', fr: 'Mealie est injoignable pour le moment.' },
-      language,
-    );
+    return buildMessageContent(UNREACHABLE, language);
   }
 });
 
@@ -139,6 +178,20 @@ gladys.onWidgetGetImage(async (imageKey) => {
   const image = await mealie.getRecipeThumbnail(recipeId);
   if (image.length > MAX_IMAGE_BYTES) throw new Error(`Image ${imageKey} too large`);
   return image.toString('base64');
+});
+
+// --- Scene actions -----------------------------------------------------------
+// Throwing fails only this action: the scene logs it and goes on.
+gladys.onSceneAction(GET_NEXT_MEAL_ACTION, async (fields) => {
+  if (!mealie) throw new Error(NOT_READY.en);
+  const now = new Date();
+  return getNextMealOutputs(await fetchMealPlan(mealie, now), now, fields);
+});
+
+gladys.onSceneAction(GET_DAY_MEALS_ACTION, async (fields) => {
+  if (!mealie) throw new Error(NOT_READY.en);
+  const now = new Date();
+  return getDayMealsOutputs(await fetchMealPlan(mealie, now), now, fields);
 });
 
 // --- Lifecycle -----------------------------------------------------------------

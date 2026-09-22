@@ -3,7 +3,8 @@
 Bonap est un planificateur de repas construit sur [Mealie](https://mealie.io) (recettes et planning). Cette intégration :
 
 - **installe Mealie et Bonap dans Gladys** si vous ne les avez pas encore, ou se connecte à ceux que vous avez déjà ;
-- ajoute un **widget « Prochain repas »** à votre tableau de bord.
+- ajoute deux **widgets** au tableau de bord : « Prochain repas » et « Planning des repas » ;
+- ajoute des **actions de scène** pour utiliser le menu dans vos scènes (message Telegram, annonce…).
 
 ## Configuration
 
@@ -20,9 +21,23 @@ Bonap est un planificateur de repas construit sur [Mealie](https://mealie.io) (r
 
 Les adresses de Mealie et de Bonap installés par Gladys sont affichées dans la section « Accès » et dans l'écran Supervision (liens « Ouvrir »).
 
-## Widget « Prochain repas »
+## Widgets
 
-Dans le tableau de bord, ajoutez le widget **Prochain repas** (section Extensions). Il affiche le prochain créneau du planning Mealie (petit-déjeuner jusqu'à 10 h, déjeuner jusqu'à 14 h, dîner jusqu'à 21 h), avec la photo et la description de la recette.
+Dans le tableau de bord, passez en édition et ajoutez un widget de la section Extensions :
+
+- **Prochain repas** : le prochain créneau du planning Mealie (petit-déjeuner jusqu'à 10 h, déjeuner jusqu'à 14 h, goûter jusqu'à 17 h, dîner jusqu'à 21 h), avec la photo et la description de la recette. Réglage « Repas à afficher » : cochez par exemple seulement « Dîner » (vide = tous les repas).
+- **Planning des repas** : les repas à venir sur 1 à 7 jours (réglage « Jours », 3 par défaut), 8 lignes au maximum.
+
+Les widgets se mettent à jour toutes les 15 minutes.
+
+## Scènes
+
+Deux actions sont disponibles dans l'éditeur de scènes (carte « Bonap ») :
+
+- **Obtenir le prochain repas** (champs : type de repas, langue) → résultats : `Repas trouvé`, `Nom du repas`, `Type de repas`, `Jour`, `Date`, `Résumé` (ex. « Aujourd'hui · Dîner : Poulet rôti »).
+- **Obtenir les repas du jour** (champs : aujourd'hui ou demain, langue) → résultats : `Nombre de repas`, `Noms des repas`, `Résumé` (une ligne par repas, ex. « Déjeuner : Quiche »).
+
+Exemple : déclencheur « Tous les jours à 11 h » → « Obtenir les repas du jour » → « Envoyer un message » avec le résumé en variable.
 
 ## Bon à savoir
 

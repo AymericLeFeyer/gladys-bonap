@@ -41,20 +41,51 @@ function slotOf(entryType: string) {
   return SLOTS[entryType] ?? UNKNOWN_SLOT;
 }
 
-/** The first meal slot that is not over yet, or null when nothing is planned. */
-export function findNextMeal(entries: MealPlanEntry[], now: Date): NextMeal | null {
+/** Chronological order: day, then slot of the day, then creation order. */
+export function sortEntries(entries: MealPlanEntry[]): MealPlanEntry[] {
+  return [...entries].sort(
+    (a, b) =>
+      a.date.localeCompare(b.date) ||
+      slotOf(a.entryType).order - slotOf(b.entryType).order ||
+      a.id - b.id,
+  );
+}
+
+/**
+ * Entries whose slot is not over yet, in chronological order.
+ * @param entryTypes keep only these entry types (empty or omitted = all).
+ */
+export function upcomingEntries(
+  entries: MealPlanEntry[],
+  now: Date,
+  entryTypes: readonly string[] = [],
+): MealPlanEntry[] {
   const today = toLocalDay(now);
   const hour = now.getHours() + now.getMinutes() / 60;
+  return sortEntries(
+    entries.filter(
+      (e) =>
+        (entryTypes.length === 0 || entryTypes.includes(e.entryType)) &&
+        (e.date > today || (e.date === today && hour < slotOf(e.entryType).endsAt)),
+    ),
+  );
+}
 
-  const upcoming = entries
-    .filter((e) => e.date > today || (e.date === today && hour < slotOf(e.entryType).endsAt))
-    .sort(
-      (a, b) =>
-        a.date.localeCompare(b.date) ||
-        slotOf(a.entryType).order - slotOf(b.entryType).order ||
-        a.id - b.id,
-    );
+/** Every entry of one day (past slots included), in chronological order. */
+export function mealsOfDay(entries: MealPlanEntry[], day: string): MealPlanEntry[] {
+  return sortEntries(entries.filter((e) => e.date === day));
+}
 
+/**
+ * The first meal slot that is not over yet, or null when nothing is planned.
+ * @param entryTypes keep only these entry types (empty or omitted = all).
+ */
+export function findNextMeal(
+  entries: MealPlanEntry[],
+  now: Date,
+  entryTypes: readonly string[] = [],
+): NextMeal | null {
+  const upcoming = upcomingEntries(entries, now, entryTypes);
   const first = upcoming[0];
   if (!first) return null;
   return {
